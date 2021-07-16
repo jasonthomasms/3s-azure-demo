@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -58,19 +59,21 @@ namespace AzureIntegrationDemo.Controllers
         {
             var headers = GetHeaders();
             var body = string.Empty;
-            var parameters = Request.QueryString.ToString().Substring(1);
+            var parameters = Request.QueryString.ToString().Length > 0 ? Request.QueryString.ToString().Substring(1) : string.Empty;
 
-            var minutes= int.Parse(Request.Query["minutes"].ToString());
-            var threshold = int.Parse(Request.Query["threshold"].ToString());
+            // Read configuration from env variables or use defaults.
+            var minutes = System.Environment.GetEnvironmentVariable("MINUTES") != null ? int.Parse(System.Environment.GetEnvironmentVariable("MINUTES")): 120;
+            var threshold = System.Environment.GetEnvironmentVariable("THRESHOLD") != null ? int.Parse(System.Environment.GetEnvironmentVariable("THRESHOLD")) : 3;
+            var enableLiveSiteStatus = System.Environment.GetEnvironmentVariable("ENABLE_LIVESITE_STATUS") != null ? bool.Parse(System.Environment.GetEnvironmentVariable("ENABLE_LIVESITE_STATUS")) : true;
+            var enable3sResponse = System.Environment.GetEnvironmentVariable("ENABLE_3S_RESPONSE") != null ? bool.Parse(System.Environment.GetEnvironmentVariable("ENABLE_3S_RESPONSE")) : true;
 
-            // Read request body as incoming string, story in body.
+
+            // Read request body as incoming string, store in body.
             using (var reader = new StreamReader(Request.Body))
             {
                 var bodyReadTask = reader.ReadToEndAsync();
                 bodyReadTask.Wait();
                 body = bodyReadTask.Result;
-                
-                
             }
 
             // add search request to internal records and save
@@ -78,12 +81,12 @@ namespace AzureIntegrationDemo.Controllers
             _context.DemoItems.Add(searchRequest);
             await _context.SaveChangesAsync();
 
-            var (isLiveSitePossible, responseContent) = Call3s(searchRequest, minutes, threshold);
+            var result = Call3s(searchRequest, minutes, threshold, enableLiveSiteStatus, enable3sResponse);
 
             DoSomething();
-            FlorinDeviceCall(isLiveSitePossible);
+            //FlorinDeviceCall(isLiveSitePossible);
 
-            return Content($"Heightened Live Site Potential: {isLiveSitePossible}.\nResponse:\n{responseContent}");
+            return Content($"{result}");
         }
 
         // GET: api/demo/searches
@@ -109,7 +112,7 @@ namespace AzureIntegrationDemo.Controllers
             return searches;
         }
 
-        public (bool, string) Call3s(SearchRequest request, int minutes, int threshold)
+        public JObject Call3s(SearchRequest request, int minutes, int threshold, bool enableLiveSiteStatus, bool enable3sResponse)
         {
             // make http request here to 3s. Maybe move this to its own helper class.
 
@@ -119,9 +122,28 @@ namespace AzureIntegrationDemo.Controllers
 
             var liveSiteMonitor = new SSS.SSSLiveSiteMessageMonitor(sssClient, "3SFileSearchDRI", minutes, threshold, null);
 
-            var (heightenedLiveSitePossible, responseContent) = liveSiteMonitor.Run();
+            var (IsActiveLiveSite, SSSResponse) = liveSiteMonitor.Run();
 
-            return liveSiteMonitor.Run();
+            // create logic to format json object...
+
+            return ResponseBuilder(SSSResponse, IsActiveLiveSite, enableLiveSiteStatus, enable3sResponse);
+        }
+
+        public JObject ResponseBuilder(JObject sssResponse, bool isActiveLiveSite, bool enableLiveSiteStatus, bool enable3sResponse)
+        {
+
+            var result = new JObject();
+
+            if (enableLiveSiteStatus)
+            {
+                result["IsActiveLiveSite"] = isActiveLiveSite;
+            }
+            if(enable3sResponse)
+            {
+                result["SSSResponse"] = sssResponse;
+            }
+
+            return result;
         }
 
         public void DoSomething()
