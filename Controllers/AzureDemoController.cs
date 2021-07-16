@@ -45,7 +45,7 @@ namespace AzureIntegrationDemo.Controllers
             string headers = string.Empty;
             foreach(var key in Request.Headers.Keys)
             {
-                headers += key + "=" + Request.Headers[key] + "\n";
+                headers += $"{key}: {Request.Headers[key]}";
             }
             return headers;
         }
@@ -73,14 +73,14 @@ namespace AzureIntegrationDemo.Controllers
             }
 
             // add search request to internal records and save
-            var searchRequest = new SearchRequest(headers, body, parameters);
+            var searchRequest = new SearchRequest(headers, body, parameters, Request.Headers["X-3S-Token"].ToString());
             _context.DemoItems.Add(searchRequest);
             await _context.SaveChangesAsync();
 
-            Call3s(searchRequest);
+            var isLiveSitePossible = Call3s(searchRequest);
             DoSomething();
 
-            return NoContent();
+            return Content($"Heightened Live Site Potential: {isLiveSitePossible}.");
         }
 
         // GET: api/demo/searches
@@ -106,9 +106,19 @@ namespace AzureIntegrationDemo.Controllers
             return searches;
         }
 
-        public void Call3s(SearchRequest request)
+        public bool Call3s(SearchRequest request)
         {
             // make http request here to 3s. Maybe move this to its own helper class.
+
+            /* TODO: Need to integrate
+             */
+            var sssClient = new SSS.SSSClient(null, request.Token, false);
+
+            var liveSiteMonitor = new SSS.SSSLiveSiteMessageMonitor(sssClient, "3SFileSearchDRI", 180, 2, null);
+
+            var heightenedLiveSitePossible = liveSiteMonitor.Run();
+
+            return heightenedLiveSitePossible;
         }
 
         public void DoSomething()
