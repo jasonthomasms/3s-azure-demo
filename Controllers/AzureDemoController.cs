@@ -38,8 +38,6 @@ namespace AzureIntegrationDemo.Controllers
             return id * 5;
         }
 
-        // GET: api/demo/headers
-        [HttpGet("headers")]
         public string GetHeaders()
         {
             string headers = string.Empty;
@@ -62,6 +60,9 @@ namespace AzureIntegrationDemo.Controllers
             var body = string.Empty;
             var parameters = Request.QueryString.ToString().Substring(1);
 
+            var minutes= int.Parse(Request.Query["minutes"].ToString());
+            var threshold = int.Parse(Request.Query["threshold"].ToString());
+
             // Read request body as incoming string, story in body.
             using (var reader = new StreamReader(Request.Body))
             {
@@ -77,10 +78,12 @@ namespace AzureIntegrationDemo.Controllers
             _context.DemoItems.Add(searchRequest);
             await _context.SaveChangesAsync();
 
-            var isLiveSitePossible = Call3s(searchRequest);
-            DoSomething();
+            var (isLiveSitePossible, responseContent) = Call3s(searchRequest, minutes, threshold);
 
-            return Content($"Heightened Live Site Potential: {isLiveSitePossible}.");
+            DoSomething();
+            FlorinDeviceCall(isLiveSitePossible);
+
+            return Content($"Heightened Live Site Potential: {isLiveSitePossible}.\nResponse:\n{responseContent}");
         }
 
         // GET: api/demo/searches
@@ -100,13 +103,13 @@ namespace AzureIntegrationDemo.Controllers
 
             foreach (var searchRequest in _context.DemoItems)
             {
-                searches += $"{searchRequest.Id}\n{searchRequest.Parameters}\n{searchRequest.Headers}\n{searchRequest.Body}\n\n\n";
+                searches += $"{searchRequest.Id}\n{searchRequest.Parameters}\n{searchRequest.Body}\n\n\n";
             }
             // Maybe figure out a better way to send data. This is just sending text. Lets send back as json
             return searches;
         }
 
-        public bool Call3s(SearchRequest request)
+        public (bool, string) Call3s(SearchRequest request, int minutes, int threshold)
         {
             // make http request here to 3s. Maybe move this to its own helper class.
 
@@ -114,16 +117,21 @@ namespace AzureIntegrationDemo.Controllers
              */
             var sssClient = new SSS.SSSClient(null, request.Token, false);
 
-            var liveSiteMonitor = new SSS.SSSLiveSiteMessageMonitor(sssClient, "3SFileSearchDRI", 180, 2, null);
+            var liveSiteMonitor = new SSS.SSSLiveSiteMessageMonitor(sssClient, "3SFileSearchDRI", minutes, threshold, null);
 
-            var heightenedLiveSitePossible = liveSiteMonitor.Run();
+            var (heightenedLiveSitePossible, responseContent) = liveSiteMonitor.Run();
 
-            return heightenedLiveSitePossible;
+            return liveSiteMonitor.Run();
         }
 
         public void DoSomething()
         {
             // Make a call with the query string to sentiment or something else. Move to its own helper class.
+        }
+
+        public void FlorinDeviceCall(bool isLiveSite)
+        {
+
         }
     }
 }

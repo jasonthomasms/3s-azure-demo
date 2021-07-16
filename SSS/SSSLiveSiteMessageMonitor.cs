@@ -23,7 +23,7 @@
             this.determiner = liveSiteDeterminer;
         }
 
-        public bool Run()
+        public (bool, string) Run()
         {
             var request = JObject.Parse(BuildRequest());
 
@@ -31,7 +31,7 @@
 
             var determiner = this.determiner ?? this.DefaultDeterminer;
 
-            return determiner(response);
+            return (determiner(response), response.ToString());
         }
 
         private string GetEarlierDateTime(int offset)
