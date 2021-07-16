@@ -109,6 +109,15 @@ namespace AzureIntegrationDemo.Controllers
         public void Call3s(SearchRequest request)
         {
             // make http request here to 3s. Maybe move this to its own helper class.
+
+            /* TODO: Need to integrate
+             * 
+            var sssClient = new SSS.SSSClient(null, "token", false);
+
+            var liveSiteMonitor = new SSS.SSSLiveSiteMessageMonitor(sssClient, "3SFileSearchDRI", 60, 3, null);
+
+            var heightenedLiveSitePossible = liveSiteMonitor.Run();
+            */
         }
 
         public void DoSomething()
