@@ -107,15 +107,23 @@ namespace AzureIntegrationDemo.Controllers
                 return "No searches have been made!";
             }
 
+            searches += "Searches:\n\n\n";
+            
             foreach (var searchRequest in _context.DemoItems)
             {
                 searches += $"{searchRequest.Id}\n{searchRequest.Parameters}\n{searchRequest.Body}\n\n\n";
             }
+
             // Maybe figure out a better way to send data. This is just sending text. Lets send back as json
             return searches;
         }
 
-        public (JObject, bool) Call3s(SearchRequest request, int minutes, int threshold, bool enableLiveSiteStatus, bool enable3sResponse)
+        public (JObject, bool) Call3s(
+            SearchRequest request, 
+            int minutes, 
+            int threshold, 
+            bool enableLiveSiteStatus, 
+            bool enable3sResponse)
         {
             // make http request here to 3s. Maybe move this to its own helper class.
 
