@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.IO;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using AzureIntegrationDemo.Models;
 
 namespace AzureIntegrationDemo.Controllers
@@ -84,9 +86,10 @@ namespace AzureIntegrationDemo.Controllers
             var result = Call3s(searchRequest, minutes, threshold, enableLiveSiteStatus, enable3sResponse);
 
             DoSomething();
-            //FlorinDeviceCall(isLiveSitePossible);
 
-            return Content($"{result}");
+            NotifyIotDevice(result.Item2);
+
+            return Content($"{result.Item1}");
         }
 
         // GET: api/demo/searches
@@ -112,7 +115,7 @@ namespace AzureIntegrationDemo.Controllers
             return searches;
         }
 
-        public JObject Call3s(SearchRequest request, int minutes, int threshold, bool enableLiveSiteStatus, bool enable3sResponse)
+        public (JObject, bool) Call3s(SearchRequest request, int minutes, int threshold, bool enableLiveSiteStatus, bool enable3sResponse)
         {
             // make http request here to 3s. Maybe move this to its own helper class.
 
@@ -126,7 +129,7 @@ namespace AzureIntegrationDemo.Controllers
 
             // create logic to format json object...
 
-            return ResponseBuilder(SSSResponse, IsActiveLiveSite, enableLiveSiteStatus, enable3sResponse);
+            return (ResponseBuilder(SSSResponse, IsActiveLiveSite, enableLiveSiteStatus, enable3sResponse), IsActiveLiveSite);
         }
 
         public JObject ResponseBuilder(JObject sssResponse, bool isActiveLiveSite, bool enableLiveSiteStatus, bool enable3sResponse)
@@ -151,9 +154,20 @@ namespace AzureIntegrationDemo.Controllers
             // Make a call with the query string to sentiment or something else. Move to its own helper class.
         }
 
-        public void FlorinDeviceCall(bool isLiveSite)
+        public void NotifyIotDevice(bool isLiveSite)
         {
+            try
+            {
+                IOT.IOTClient iOTClient = new IOT.IOTClient();
+                
+                var result = iOTClient.SendNotification();
 
+                Trace.TraceInformation(result);
+            }
+            catch(Exception exception)
+            {
+                Trace.TraceInformation(exception.ToString());
+            }
         }
     }
 }
