@@ -2,7 +2,6 @@
 {
     using System;
     using System.Net.Http;
-    using Newtonsoft.Json.Linq;
 
     public class IOTClient
     {
@@ -13,7 +12,6 @@
         public IOTClient()
         {
             httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(SasToken);
         }
 
         public string SendNotification()
@@ -27,6 +25,7 @@
             {
                 Content = content 
             };
+            message.Headers.Add("Authorization", SasToken);
 
             var response = this.httpClient.SendAsync(message).Result;
 
